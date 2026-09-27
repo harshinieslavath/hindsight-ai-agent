@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Hindsight AI</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Inter, Arial, sans-serif;
+            background: #f5f7fb;
+            color: #1f2937;
+        }
+
+        .app {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        /* HEADER */
+
+        .header {
+            background: #111827;
+            color: white;
+            padding: 24px 28px;
+            border-radius: 18px;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        .header p {
+            margin: 8px 0 0;
+            color: #cbd5e1;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            margin-top: 14px;
+            font-size: 13px;
+            color: #86efac;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+        }
+
+        /* MAIN */
+
+        .main {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+        }
+
+        /* CHAT */
+
+        .card {
+            background: white;
+            border-radius: 18px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .chat-card {
+            height: 650px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            padding: 18px 22px;
+            border-bottom: 1px solid #eee;
+            font-weight: bold;
+        }
+
+        #chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 13px 16px;
+            margin-bottom: 14px;
+            border-radius: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .user {
+            margin-left: auto;
+            background: #111827;
+            color: white;
+        }
+
+        .agent {
+            background: #f1f5f9;
+            color: #1f2937;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+            padding: 18px;
+            border-top: 1px solid #eee;
+        }
+
+        input {
+            flex: 1;
+            padding: 14px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            font-size: 15px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #111827;
+        }
+
+        button {
+            border: none;
+            border-radius: 12px;
+            padding: 13px 20px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .send-button {
+            background: #111827;
+            color: white;
+        }
+
+        .send-button:hover {
+            opacity: 0.85;
+        }
+
+        /* MEMORY */
+
+        .memory-card {
+            height: 650px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .memory-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .memory-title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .memory-subtitle {
+            margin-top: 5px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        #memories {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .memory-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .memory-icon {
+            margin-right: 5px;
+        }
+
+        .refresh-button {
+            margin: 15px;
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+        .refresh-button:hover {
+            background: #dbe0e6;
+        }
+
+        .loading {
+            color: #6b7280;
+            font-size: 14px;
+            padding: 10px;
+        }
+
+        /* FOOTER */
+
+        .footer {
+            text-align: center;
+            margin-top: 18px;
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        /* MOBILE */
+
+        @media (max-width: 850px) {
+
+            .main {
+                grid-template-columns: 1fr;
+            }
+
+            .chat-card,
+            .memory-card {
+                height: 550px;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- HEADER -->
+
+    <div class="header">
+
+        <h1>🧠 Hindsight AI</h1>
+
+        <p>
+            An AI agent that remembers, learns, and personalizes
+            conversations over time.
+        </p>
+
+        <div class="status">
+            <span class="status-dot"></span>
+            Hindsight Memory Online
+        </div>
+
+    </div>
+
+
+    <!-- MAIN -->
+
+    <div class="main">
+
+        <!-- CHAT -->
+
+        <div class="card chat-card">
+
+            <div class="card-header">
+                💬 Conversation
+            </div>
+
+            <div id="chat"></div>
+
+            <div class="input-area">
+
+                <input
+                    type="text"
+                    id="message"
+                    placeholder="Tell the agent something..."
+                    onkeydown="handleEnter(event)"
+                >
+
+                <button
+                    class="send-button"
+                    onclick="sendMessage()"
+                >
+                    Send
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- MEMORY -->
+
+        <div class="card memory-card">
+
+            <div class="memory-header">
+
+                <div class="memory-title">
+                    🧠 Long-Term Memory
+                </div>
+
+                <div class="memory-subtitle">
+                    Information remembered by Hindsight
+                </div>
+
+            </div>
+
+            <div id="memories">
+
+                <div class="loading">
+                    Loading memories...
+                </div>
+
+            </div>
+
+            <button
+                class="refresh-button"
+                onclick="loadMemories()"
+            >
+                🔄 Refresh Memory
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <div class="footer">
+        Powered by FastAPI • Groq • Hindsight
+    </div>
+
+</div>
+
+
+<script>
+
+const API_URL = "http://127.0.0.1:8000";
+
+
+function handleEnter(event) {
+
+    if (event.key === "Enter") {
+        sendMessage();
+    }
+
+}
+
+
+function escapeHtml(text) {
+
+    const div = document.createElement("div");
+
+    div.textContent = text;
+
+    return div.innerHTML;
+
+}
+
+
+async function sendMessage() {
+
+    const input = document.getElementById("message");
+
+    const chat = document.getElementById("chat");
+
+    const message = input.value.trim();
+
+    if (!message) {
+        return;
+    }
+
+
+    // USER MESSAGE
+
+    chat.innerHTML += `
+        <div class="message user">
+            ${escapeHtml(message)}
+        </div>
+    `;
+
+    input.value = "";
+
+    chat.scrollTop = chat.scrollHeight;
+
+
+    // LOADING MESSAGE
+
+    const loadingId = "loading-" + Date.now();
+
+    chat.innerHTML += `
+        <div class="message agent" id="${loadingId}">
+            <span class="loading">
+                🧠 Recalling memory and thinking...
+            </span>
+        </div>
+    `;
+
+    chat.scrollTop = chat.scrollHeight;
+
+
+    try {
+
+        const response = await fetch(
+            API_URL +
+            "/chat?user_message=" +
+            encodeURIComponent(message),
+            {
+                method: "POST"
+            }
+        );
+
+
+        if (!response.ok) {
+            throw new Error("Backend request failed");
+        }
+
+
+        const data = await response.json();
+
+
+        document.getElementById(loadingId).innerHTML = `
+            ${escapeHtml(data.answer)}
+        `;
+
+
+        // REFRESH MEMORY
+
+        loadMemories();
+
+
+    } catch (error) {
+
+        document.getElementById(loadingId).innerHTML = `
+            ❌ Unable to connect to the AI backend.
+        `;
+
+        console.error(error);
+
+    }
+
+
+    chat.scrollTop = chat.scrollHeight;
+
+}
+
+
+async function loadMemories() {
+
+    const memoryContainer =
+        document.getElementById("memories");
+
+
+    memoryContainer.innerHTML = `
+        <div class="loading">
+            🧠 Loading memories...
+        </div>
+    `;
+
+
+    try {
+
+        const response = await fetch(
+            API_URL + "/memories"
+        );
+
+
+        if (!response.ok) {
+            throw new Error("Memory request failed");
+        }
+
+
+        const data = await response.json();
+
+
+        memoryContainer.innerHTML = "";
+
+
+        if (
+            !data.memories ||
+            data.memories.length === 0
+        ) {
+
+            memoryContainer.innerHTML = `
+                <div class="loading">
+                    No memories yet.
+                </div>
+            `;
+
+            return;
+        }
+
+
+        data.memories.forEach(memory => {
+
+            const element =
+                document.createElement("div");
+
+            element.className =
+                "memory-item";
+
+            element.innerHTML = `
+                <span class="memory-icon">🧠</span>
+                ${escapeHtml(memory)}
+            `;
+
+            memoryContainer.appendChild(element);
+
+        });
+
+
+    } catch (error) {
+
+        memoryContainer.innerHTML = `
+            <div class="loading">
+                ❌ Unable to load memories.
+            </div>
+        `;
+
+        console.error(error);
+
+    }
+
+}
+
+
+// LOAD MEMORY WHEN PAGE OPENS
+
+loadMemories();
+
+</script>
+
+</body>
+
+</html>
