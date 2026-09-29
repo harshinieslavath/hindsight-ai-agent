@@ -8,6 +8,7 @@
     <title>Hindsight AI</title>
 
     <style>
+
         * {
             box-sizing: border-box;
         }
@@ -114,6 +115,39 @@
         .agent {
             background: #f1f5f9;
             color: #1f2937;
+        }
+
+        /* WHY THIS ANSWER */
+
+        .why-answer {
+            margin-top: 12px;
+            padding: 12px;
+            background: white;
+            border: 1px solid #dbe3ee;
+            border-radius: 12px;
+            font-size: 13px;
+            white-space: normal;
+        }
+
+        .why-title {
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #111827;
+        }
+
+        .why-memory {
+            padding: 8px 10px;
+            margin-top: 6px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 3px solid #64748b;
+            line-height: 1.4;
+        }
+
+        .why-time {
+            margin-top: 4px;
+            color: #6b7280;
+            font-size: 11px;
         }
 
         .input-area {
@@ -238,8 +272,11 @@
             .message {
                 max-width: 90%;
             }
+
         }
+
     </style>
+
 </head>
 
 <body>
@@ -368,6 +405,69 @@ function escapeHtml(text) {
 }
 
 
+/* DISPLAY WHY THIS ANSWER */
+
+function createWhyAnswer(memories) {
+
+    if (!memories || memories.length === 0) {
+
+        return `
+            <div class="why-answer">
+                <div class="why-title">
+                    🧠 Why this answer?
+                </div>
+
+                <div>
+                    No relevant long-term memories were used.
+                </div>
+            </div>
+        `;
+    }
+
+
+    const memoryHtml = memories
+        .slice(0, 3)
+        .map(item => {
+
+            return `
+                <div class="why-memory">
+
+                    <div>
+                        ${escapeHtml(item.memory)}
+                    </div>
+
+                    <div class="why-time">
+                        🕒 ${escapeHtml(item.mentioned_at)}
+                    </div>
+
+                </div>
+            `;
+
+        })
+        .join("");
+
+
+    return `
+        <div class="why-answer">
+
+            <div class="why-title">
+                🧠 Why this answer?
+            </div>
+
+            <div>
+                The agent recalled these Hindsight memories:
+            </div>
+
+            ${memoryHtml}
+
+        </div>
+    `;
+
+}
+
+
+/* SEND MESSAGE */
+
 async function sendMessage() {
 
     const input = document.getElementById("message");
@@ -429,8 +529,16 @@ async function sendMessage() {
         const data = await response.json();
 
 
+        /* ANSWER + WHY THIS ANSWER */
+
         document.getElementById(loadingId).innerHTML = `
-            ${escapeHtml(data.answer)}
+
+            <div>
+                ${escapeHtml(data.answer)}
+            </div>
+
+            ${createWhyAnswer(data.used_memories)}
+
         `;
 
 
@@ -454,6 +562,8 @@ async function sendMessage() {
 
 }
 
+
+/* LOAD LONG-TERM MEMORIES */
 
 async function loadMemories() {
 
@@ -534,7 +644,7 @@ async function loadMemories() {
 }
 
 
-// LOAD MEMORY WHEN PAGE OPENS
+/* LOAD MEMORY WHEN PAGE OPENS */
 
 loadMemories();
 

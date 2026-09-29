@@ -17,6 +17,26 @@ groq = Groq(api_key=os.getenv("GROQ_API_KEY"))
 BANK_ID = "hackathon-agent"
 
 
+# 📌 Store project-specific context
+def remember_project_context(project_name, context):
+
+    hindsight.retain(
+        bank_id=BANK_ID,
+        content=f"""
+PROJECT CONTEXT:
+
+Project: {project_name}
+
+Context:
+{context}
+
+This information belongs specifically to this project
+and should be used when answering future questions
+about the project.
+"""
+    )
+
+
 def ask_agent(user_message):
 
     # 1. Recall relevant memories from Hindsight
@@ -26,7 +46,7 @@ def ask_agent(user_message):
         budget="high"
     )
 
-    # 2. Sort memories by when they were stored
+    # 2. Sort memories from newest to oldest
     memories_list = list(result.results)
 
     memories_list.sort(
@@ -36,14 +56,17 @@ def ask_agent(user_message):
         reverse=True
     )
 
-    # 3. Build memory context
+    # 3. Keep only the 3 newest memories used for this answer
+    used_memories = memories_list[:3]
+
+    # 4. Build memory context
     memories = "\n".join(
         f"- {memory.text} "
         f"(stored: {memory.mentioned_at})"
-        for memory in memories_list[:10]
+        for memory in used_memories
     )
 
-    # 4. Give the memories to Groq
+    # 5. Give memories to Groq
     prompt = f"""
 You are an AI agent with long-term memory.
 
@@ -62,6 +85,8 @@ IMPORTANT RULES:
 - Never choose an older preference just because it appears more often.
 - For project-specific preferences, the newest project-specific
   preference has priority.
+- Project context should be used when the current question
+  is related to that project.
 - Answer only what the user asked.
 - Keep the answer concise.
 - Do not invent information.
@@ -69,7 +94,7 @@ IMPORTANT RULES:
 Now answer the current user message.
 """
 
-    # 5. Generate answer
+    # 6. Generate answer
     response = groq.chat.completions.create(
         model="openai/gpt-oss-120b",
         messages=[
@@ -82,7 +107,7 @@ Now answer the current user message.
 
     answer = response.choices[0].message.content
 
-    # 6. Detect preference updates
+    # 7. Detect preference updates
     lower_message = user_message.lower()
 
     preference_phrases = [
@@ -112,7 +137,7 @@ this newer preference should be treated as current.
 """
         )
 
-    # 7. Store complete interaction
+    # 8. Store complete interaction
     hindsight.retain(
         bank_id=BANK_ID,
         content=f"""
@@ -124,4 +149,16 @@ Assistant: {answer}
 """
     )
 
-    return answer
+    # 9. Return answer + memories used
+    return {
+        "answer": answer,
+        "used_memories": [
+            {
+                "memory": memory.text,
+                "mentioned_at": str(memory.mentioned_at)
+                if memory.mentioned_at
+                else "Previously remembered"
+            }
+            for memory in used_memories
+        ]
+    }
